@@ -1,3 +1,6 @@
+--only-binary=:all:
+--prefer-binary
+
 streamlit==1.53.0
 numpy==2.4.1
 pandas==2.2.3
