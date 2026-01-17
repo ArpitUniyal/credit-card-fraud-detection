@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
 import os
-import shap
 
 # Set page configuration
 st.set_page_config(
