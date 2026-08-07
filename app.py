@@ -4,7 +4,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
-import os
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix
+)
 
 # Set page configuration
 st.set_page_config(
@@ -25,15 +31,20 @@ def load_model():
         return None, None
 
 # Function to make predictions
-def predict(data, model, scaler,threshold):
+def predict(data, model, scaler, threshold):
+
+    # Remove Class column if present
+    if 'Class' in data.columns:
+        data = data.drop('Class', axis=1)
+
     # Ensure Time and Amount are scaled
     if 'Time' in data.columns and 'Amount' in data.columns:
         data[['Time', 'Amount']] = scaler.transform(data[['Time', 'Amount']])
-    
+
     # Make predictions
     probs = model.predict_proba(data)[:, 1]
     predictions = (probs >= threshold).astype(int)
-    
+
     return predictions, probs
 
 # Function to generate random transaction
@@ -94,7 +105,7 @@ def main():
             st.subheader("Data Preview")
             st.dataframe(df.head())
 
-            # Check if required columns exist
+            # Check if required columns exist only to checck whether user uploaded the correct file
             required_cols = ['Time', 'Amount', 'V1', 'V2', 'V3', 'V4']
             missing_cols = [col for col in required_cols if col not in df.columns]
 
@@ -109,9 +120,66 @@ def main():
                 results['Fraud_Probability'] = probabilities
                 results['Prediction'] = predictions
 
+                # Evaluate model if actual labels are available
+                if "Class" in df.columns:
+
+                    accuracy = accuracy_score(df["Class"], predictions)
+                    precision = precision_score(df["Class"], predictions, zero_division=0)
+                    recall = recall_score(df["Class"], predictions, zero_division=0)
+                    f1 = f1_score(df["Class"], predictions, zero_division=0)
+
                 # Display results
                 st.subheader("Prediction Results")
 
+                # Show evaluation metrics if actual labels are available
+                if "Class" in df.columns:
+
+                    st.subheader("Model Evaluation")
+
+                    e1, e2, e3, e4 = st.columns(4)
+
+                    with e1:
+                         st.metric("Accuracy", f"{accuracy:.4f}")
+
+                    with e2:
+                         st.metric("Precision", f"{precision:.4f}")
+
+                    with e3:
+                         st.metric("Recall", f"{recall:.4f}")
+
+                    with e4:
+                         st.metric("F1 Score", f"{f1:.4f}")
+
+
+                    # Confusion Matrix
+                    st.subheader("Confusion Matrix")
+
+                    cm = confusion_matrix(df["Class"], predictions)
+
+                    fig, ax = plt.subplots(figsize=(6, 5))
+
+                    sns.heatmap(
+                              cm,
+                              annot=True,
+                              fmt="d",
+                              cmap="Blues",
+                              xticklabels=["Legitimate", "Fraud"],
+                              yticklabels=["Legitimate", "Fraud"],
+                              ax=ax
+                          )
+
+                    ax.set_xlabel("Predicted")
+                    ax.set_ylabel("Actual")
+                    ax.set_title("Confusion Matrix")
+
+                    st.pyplot(fig)
+
+                    tn, fp, fn, tp = cm.ravel()
+
+                    st.write(f"**True Negatives (TN):** {tn}")
+                    st.write(f"**False Positives (FP):** {fp}")
+                    st.write(f"**False Negatives (FN):** {fn}")
+                    st.write(f"**True Positives (TP):** {tp}")
                 # Summary metrics
                 col1, col2, col3 = st.columns(3)
                 with col1:
@@ -154,10 +222,12 @@ def main():
 
                 # Feature importance
                 st.subheader("Feature Importance")
+                feature_columns = df.drop(columns=["Class"], errors="ignore").columns
+
                 feature_importance = pd.DataFrame({
-                    'Feature': df.columns,
-                    'Importance': model.feature_importances_
-                }).sort_values('Importance', ascending=False)
+                "Feature": feature_columns,
+                "Importance": model.feature_importances_
+                }).sort_values("Importance", ascending=False)
 
                 fig, ax = plt.subplots(figsize=(12, 8))
                 sns.barplot(x='Importance', y='Feature', data=feature_importance.head(15))
@@ -180,7 +250,8 @@ def main():
 
         # Load sample data for feature ranges
         try:
-            sample_data = pd.read_csv('testcreditcard.csv')
+            sample_data = pd.read_csv("testcreditcard.csv")
+            sample_data = sample_data.drop(columns=["Class"], errors="ignore")
         except FileNotFoundError:
             st.error("Sample data not found. Please run model_training.py first.")
             return
