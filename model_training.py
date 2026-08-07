@@ -36,15 +36,28 @@ if duplicates > 0:
 X = df.drop('Class', axis=1)
 y = df['Class']
 
-# Scale the Time and Amount features
-scaler = StandardScaler()
-X[['Time', 'Amount']] = scaler.fit_transform(X[['Time', 'Amount']])
-
 # Split the data into training and testing sets (stratified to maintain class distribution)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
 
 print(f"Training set shape: {X_train.shape}")
 print(f"Testing set shape: {X_test.shape}")
+
+# Scale only Time and Amount using training data
+scaler = StandardScaler()
+
+X_train[['Time', 'Amount']] = scaler.fit_transform(
+    X_train[['Time', 'Amount']]
+)
+
+X_test[['Time', 'Amount']] = scaler.transform(
+    X_test[['Time', 'Amount']]
+)
 
 # Train a Random Forest model with balanced class weights
 print("Training Random Forest model...")
@@ -96,10 +109,14 @@ print("Saving model and preprocessor...")
 joblib.dump(model, 'models/fraud_model.pkl')
 joblib.dump(scaler, 'models/preprocessor.pkl')
 
-# Create a new dataset for testing (without Class column)
+# Create a test dataset from unseen test data
 print("Creating test dataset...")
-test_data = X.iloc[:500].copy()  # Take first 500 rows
-test_data.to_csv('testcreditcard.csv', index=False)
+
+test_data = X_test.copy()
+test_data["Class"] = y_test.values
+
+test_data.to_csv("testcreditcard.csv", index=False)
+
 print(f"Test dataset created: testcreditcard.csv with {len(test_data)} rows")
 
 print("Model training and evaluation completed successfully!")
