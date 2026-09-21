@@ -39,7 +39,6 @@ Credit-Card-Fraud-Detection/
 │
 ├── requirements.txt
 ├── README.md
-└── screenshots/
 ```
 
 ---
