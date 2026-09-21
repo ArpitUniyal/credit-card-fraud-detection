@@ -30,8 +30,7 @@ Credit-Card-Fraud-Detection/
 │
 ├── app.py                      # Streamlit application
 ├── model_training.py           # Model training script
-├── creditcard.csv              # Original dataset
-├── testcreditcard.csv          # Unseen test dataset
+├── feature_importance.png
 │
 ├── models/
 │   ├── fraud_model.pkl         # Trained Random Forest model
