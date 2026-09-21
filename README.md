@@ -2,6 +2,11 @@
 
 An end-to-end Machine Learning application that detects fraudulent credit card transactions using a **Random Forest Classifier**. The project includes a complete ML pipeline, an interactive **Streamlit** web application, and comprehensive model evaluation to identify fraudulent transactions in highly imbalanced financial data.
 
+## 🚀 Live Demo
+
+👉 **[Try the Credit Card Fraud Detection System](https://credit-card-fraud-detection-56ymxcvrjhgscbxc74rjnf.streamlit.app/)**
+
+The application is deployed using Streamlit Community Cloud.
 ---
 
 ## 🚀 Features
