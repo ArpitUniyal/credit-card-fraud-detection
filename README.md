@@ -21,6 +21,13 @@ when the uploaded CSV includes actual `Class` labels. -
 Feature-importance visualization. - Downloading prediction results as a
 CSV file.
 
+## 🚀 Live Demo
+
+**Try the deployed application here:**
+
+👉 [Credit Card Fraud Detection – Live App](https://credit-card-fraud-detection-du4qrhquskcolz5kyufmee.streamlit.app/)
+
+
 ## Dataset
 
 The project uses the Kaggle **Credit Card Fraud Detection** dataset,
