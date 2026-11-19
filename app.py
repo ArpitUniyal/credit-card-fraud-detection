@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
+import shap
 
 from sklearn.metrics import (
     accuracy_score,
@@ -59,6 +60,11 @@ def load_artifacts():
 
     threshold = float(metadata.get("threshold", DEFAULT_THRESHOLD))
     return model, list(feature_names), threshold
+
+
+@st.cache_resource
+def get_shap_explainer(_model):
+    return shap.TreeExplainer(_model)
 
 
 try:
@@ -204,19 +210,36 @@ with batch_tab:
                 else:
                     show_evaluation(actual.astype(int), predictions, probabilities)
 
-            if hasattr(model, "feature_importances_"):
-                st.subheader("Top 15 feature importances")
-                importance = pd.DataFrame(
-                    {
-                        "Feature": FEATURE_NAMES,
-                        "Importance": model.feature_importances_,
-                    }
-                ).sort_values("Importance", ascending=False).head(15)
-                fig, ax = plt.subplots(figsize=(9, 6))
-                sns.barplot(data=importance, x="Importance", y="Feature", ax=ax)
-                ax.set_title("XGBoost feature importance")
-                st.pyplot(fig)
-                plt.close(fig)
+            st.subheader("Explain predictions with SHAP")
+            st.caption(
+                "Global explanations show how features influence predictions "
+                "across a sample of uploaded transactions. SHAP values use the "
+                "model's raw output (log-odds) by default."
+            )
+            show_global_shap = st.checkbox(
+                "Generate SHAP global explanations for this batch",
+                value=False,
+                key="batch_global_shap",
+            )
+            if show_global_shap:
+                with st.spinner("Calculating SHAP values for the uploaded transactions..."):
+                    shap_sample = features.sample(
+                        n=min(500, len(features)),
+                        random_state=42,
+                    )
+                    batch_explainer = get_shap_explainer(model)
+                    batch_shap_values = batch_explainer(shap_sample)
+
+                st.write("**Global SHAP feature importance**")
+                shap.plots.bar(batch_shap_values, max_display=15, show=False)
+                st.pyplot(plt.gcf(), clear_figure=True)
+                plt.close("all")
+
+                st.write("**SHAP summary (beeswarm) plot**")
+                shap.plots.beeswarm(batch_shap_values, max_display=15, show=False)
+                st.pyplot(plt.gcf(), clear_figure=True)
+                plt.close("all")
+
 
             csv_bytes = results.to_csv(index=False).encode("utf-8")
             st.download_button(
@@ -265,6 +288,19 @@ with single_tab:
         else:
             st.success("This transaction is classified as legitimate.")
 
+        st.subheader("Why did the model make this prediction?")
+        st.caption(
+            "The waterfall plot explains this transaction's feature contributions. "
+            "Red bars push the raw model output towards fraud; blue bars push it "
+            "away from fraud. These are log-odds contributions, not percentage points."
+        )
+        with st.spinner("Generating individual SHAP explanation..."):
+            single_explainer = get_shap_explainer(model)
+            single_shap_values = single_explainer(one_row)
+            shap.plots.waterfall(single_shap_values[0], max_display=15, show=False)
+            st.pyplot(plt.gcf(), clear_figure=True)
+            plt.close("all")
+
         st.caption(
             "This is a model prediction, not a definitive determination. "
             "Real payment decisions should include additional controls and review."
@@ -273,6 +309,7 @@ with single_tab:
 with info_tab:
     st.subheader("Model information")
     st.write("**Model:** XGBoost classifier")
+    st.write("**Explainability:** SHAP (TreeSHAP) global and individual explanations")
     st.write(f"**Number of input features:** {len(FEATURE_NAMES)}")
     st.write(f"**Default saved threshold:** {saved_threshold:.2f}")
     st.write("**Input feature order:**")
